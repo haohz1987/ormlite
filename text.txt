@@ -1,0 +1,120 @@
+3、分别测试，添加一个Article；通过Id获取一个Article；通过Id获取一个Article且携带User；通过userId获取所有的Article；
+主要看第三个：通过Id获取一个Article且携带User，testGetArticleWithUser（id）
+如何值传一个Article的Id，然后能够拿到Article对象，且内部的user属性直接赋值呢？
+两种方式：
+1、即上述写法
+[java] view plain copy
+article = articleDaoOpe.queryForId(id);
+            helper.getDao(User.class).refresh(article.getUser());
+
+2、在user属性的注解上：@DatabaseField(canBeNull = true, foreign = true, columnName = "user_id", foreignAutoRefresh = true)
+添加foreignAutoRefresh =true，这样；当调用queryForId时，拿到Article对象则直接携带了user；
+
+4、关联一个集合
+每个User关联一个或多个Article，如果我在User中声明一个Collection<Article> articles，我能否在查询User的时候，一并能够获取到articles的值呢？
+答案是可以的。在User中添加如下属性，且注解如下：
+@ForeignCollectionField
+private Collection<Article> articles;
+我们在UserDao中书写查询User的代码：
+[java] view plain copy
+public User get(int id)
+    {
+        try
+        {
+            return userDaoOpe.queryForId(id);
+        } catch (SQLException e)
+        {
+            e.printStackTrace();
+        }
+        return null ;
+    }
+
+测试代码：
+[java] view plain copy
+public void testGetUserById()
+    {
+        User user = new UserDao(getContext()).get(1);
+        L.e(user.getName());
+        if (user.getArticles() != null)
+            for (Article article : user.getArticles())
+            {
+                L.e(article.toString());
+            }
+    }
+输出：
+[java] view plain copy
+09-07 22:49:06.484: E/zhy(7293): 张鸿洋
+09-07 22:49:06.484: E/zhy(7293): Article [id=1, title=ORMLite的使用]
+可以看到，我们通过一个queryForId，成功的获取了User，以及User关联的所有的Articles；
+
+5、条件查询QueryBuilder的使用
+上述代码其实已经用到了简单的条件查询了：
+1、简单的where等于
+articleDaoOpe.queryBuilder().where().eq("user_id", userId).query();直接返回Article的列表
+2、where and
+[java] view plain copy
+QueryBuilder<Article, Integer> queryBuilder = articleDaoOpe
+                .queryBuilder();
+        Where<Article, Integer> where = queryBuilder.where();
+        where.eq("user_id", 1);
+        where.and();
+        where.eq("name", "xxx");
+
+        //或者
+        articleDaoOpe.queryBuilder().//
+                where().//
+                eq("user_id", 1).and().//
+                eq("name", "xxx");
+
+上述两种都相当与：select * from tb_article where user_id = 1 and name = 'xxx' ;
+3、更复杂的查询
+[java] view plain copy
+where.or(
+                    //
+                    where.and(//
+                            where.eq("user_id", 1), where.eq("name", "xxx")),
+                    where.and(//
+                            where.eq("user_id", 2), where.eq("name", "yyy")));
+
+select * from tb_article where ( user_id = 1 and name = 'xxx' )  or ( user_id = 2 and name = 'yyy' )  ;
+好了，再复杂的查询估计也能够凑出来了~~
+6、updateBuilder、deleteBuilder
+使用queryBuilder是因为我们希望执行完成查询直接返回List<Bean>集合；
+对于Update我们并不关注返回值，直接使用
+articleDaoOpe.updateRaw(statement, arguments);传入sql和参数即可~~
+何必在那articleDaoOpe.updateBuilder().updateColumnValue("name","zzz").where().eq("user_id", 1);这样的痛苦呢~~~
+同理还有deleteBuilder还是建议直接拼写sql，当然很简单的除外，直接使用它的API~
+7、事务操作
+在我们的Dao中直接写如下代码：
+[java] view plain copy
+//事务操作
+        TransactionManager.callInTransaction(helper.getConnectionSource(),
+                new Callable<Void>()
+                {
+
+                    @Override
+                    public Void call() throws Exception
+                    {
+                        return null;
+                    }
+                });
+
+
+8、其他操作
+1、当Bean继承BaseDaoEnabled时，可以使用bean.create(bean)；bean.update(bean)一类操作
+例如：
+Student extends BaseDaoEnabled<Student, Integer>
+Dao dao = DatabaseHelper.getHelper(getContext()).getDao(Student.class);
+Student student = new Student();
+student.setDao(dao);
+student.setName("张鸿洋");
+student.create();
+前提dao需要手动设置，如果dao为null会报错，尼玛，我觉得一点用没有。。。
+2、Join
+[java] view plain copy
+QueryBuilder<Article, Integer> articleBuilder = articleDaoOpe
+                    .queryBuilder();
+            QueryBuilder userBuilder = helper.getDao(User.class).queryBuilder();
+            articleBuilder.join(userBuilder);
+
+Article与User做Join操作；
