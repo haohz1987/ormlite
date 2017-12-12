@@ -27,8 +27,6 @@ public class UserBean {
     public static final String COLUMNNAME_ID = "id";
     public static final String COLUMNNAME_NAME = "name";
     public static final String COLUMNNAME_SEX = "sex";
-    public static final String COLUMNNAME_BIRTHDAY = "birthday";
-    public static final String COLUMNNAME_ADDRESS = "address";
 
     @DatabaseField(generatedId = true, columnName = COLUMNNAME_ID, useGetSet = true)
     private int id;
@@ -36,10 +34,7 @@ public class UserBean {
     private String name;
     @DatabaseField(columnName = COLUMNNAME_SEX, useGetSet = true, defaultValue = "1")
     private char sex;
-//    @DatabaseField(columnName = COLUMNNAME_BIRTHDAY, useGetSet = true)
-//    private Date birthday;
-//    @DatabaseField(columnName = COLUMNNAME_ADDRESS, useGetSet = true)
-//    private String address;
+
     @ForeignCollectionField(eager = true)
     private ForeignCollection<ArticleBean> articles;
 
@@ -49,8 +44,6 @@ public class UserBean {
     public UserBean(String name, char sex) {
         this.name = name;
         this.sex = sex;
-//        this.birthday = birthday;
-//        this.address = address;
     }
 
     public int getId() {
@@ -68,30 +61,6 @@ public class UserBean {
     public void setName(String name) {
         this.name = name;
     }
-
-    public char getSex() {
-        return sex;
-    }
-
-    public void setSex(char sex) {
-        this.sex = sex;
-    }
-//
-//    public Date getBirthday() {
-//        return birthday;
-//    }
-//
-//    public void setBirthday(Date birthday) {
-//        this.birthday = birthday;
-//    }
-//
-//    public String getAddress() {
-//        return address;
-//    }
-//
-//    public void setAddress(String address) {
-//        this.address = address;
-//    }
 
     public ForeignCollection<ArticleBean> getArticles() {
         return articles;
